@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kailin’s 22nd Birthday Escape Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1626;--panel:#16263b;--line:#33496a;--steel:#93a7c2;--ice:#d6e6ff;--blue:#6fb1ff;--deep:#3b6fb6;--ok:#8fe3c8;--bad:#ff9aa8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;color:var(--ice);font-family:"Nunito Sans",system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.5;display:flex;justify-content:center;
+background:radial-gradient(1.5px 1.5px at 20% 30%,#cfe3ff88,transparent),radial-gradient(1.5px 1.5px at 75% 20%,#cfe3ff77,transparent),radial-gradient(1px 1px at 55% 65%,#cfe3ff66,transparent),radial-gradient(1.5px 1.5px at 10% 80%,#cfe3ff66,transparent),radial-gradient(circle at 50% -10%,#27456f,var(--bg) 65%);background-color:var(--bg);background-attachment:fixed}
+main{width:100%;max-width:520px;padding:20px 18px 40px;display:flex;flex-direction:column;min-height:100vh}
+h1,h2{font-family:"Cormorant Garamond",Georgia,serif;margin:0;line-height:1.05;font-weight:700}
+h1{font-size:50px}h2{font-size:30px}
+p{margin:0}.muted{color:var(--steel)}.blue{color:var(--blue)}
+.screen{display:none;flex:1;flex-direction:column;justify-content:center;gap:18px}
+.screen.on{display:flex}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:14px 18px;background:linear-gradient(180deg,var(--blue),var(--deep));color:#07101d;cursor:pointer;min-height:50px;width:100%}
+button:active{transform:scale(.98)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ice);outline-offset:2px}
+.ghost{background:transparent;border:2px solid var(--line);color:var(--ice)}
+.hud{display:flex;align-items:center;gap:14px}
+.dial{position:relative;width:76px;height:76px;flex:none}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .ic{position:absolute;inset:0;display:grid;place-items:center;font-size:26px}
+.track{stroke:var(--line)}.prog{stroke:var(--blue);transition:stroke-dashoffset .6s}
+.hudtxt{flex:1}.hudtxt b{font-size:20px}
+.clock{font-variant-numeric:tabular-nums;color:var(--steel);font-size:15px}
+.card{background:linear-gradient(160deg,#1b3050,var(--panel));border-radius:22px;padding:22px 20px;border:2px solid var(--line);box-shadow:inset 0 0 0 5px #0b162688}
+.card.open{border-color:var(--ok)}
+.chap{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:22px;color:var(--blue);margin-bottom:8px;display:flex;justify-content:space-between;gap:10px}
+.q{font-size:21px;line-height:1.4}
+input[type=text]{width:100%;font:inherit;font-size:20px;padding:14px;border-radius:14px;border:2px solid var(--line);background:#0b1626;color:var(--ice);margin-top:16px;text-align:center;letter-spacing:.04em}
+#hint{min-height:26px;margin-top:10px;color:var(--steel);text-align:center;letter-spacing:.2em;font-size:17px}
+#msg{min-height:30px;font-weight:700;text-align:center}
+#msg.ok{color:var(--ok)}#msg.bad{color:var(--bad)}
+.row{display:flex;flex-direction:column;gap:10px}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.star{position:fixed;top:-30px;font-size:26px;color:var(--blue);animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}.star{display:none}.prog{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <section id="intro" class="screen on">
+    <p class="blue" style="font-weight:700">✧ The door just locked behind you ✧</p>
+    <h1>Kailin’s 22nd Birthday Escape Room</h1>
+    <p class="muted">You’re trapped in the Birthday Vault. 22 locks stand between you and the party, and each one is guarded by something only your bestie would know. Crack the lock in front of you to move on. Try as many times as you need.</p>
+    <button id="start">Enter the vault</button>
+    <button id="reset" class="ghost" style="display:none">Start over from lock 1</button>
+  </section>
+
+  <section id="play" class="screen">
+    <div class="hud">
+      <div class="dial">
+        <svg viewBox="0 0 76 76"><circle class="track" cx="38" cy="38" r="33" fill="none" stroke-width="6"/><circle class="prog" id="ring" cx="38" cy="38" r="33" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="207.3"/></svg>
+        <div class="ic" id="ic">🔒</div>
+      </div>
+      <div class="hudtxt"><b id="count"></b><div class="clock">Time in the vault: <span id="clock">0:00</span></div></div>
+    </div>
+    <div class="card" id="card">
+      <div class="chap"><span id="title"></span><span id="sym"></span></div>
+      <div class="q" id="q"></div>
+      <input type="text" id="ans" placeholder="Enter the code word" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+      <div id="hint" aria-live="polite"></div>
+    </div>
+    <div id="msg" role="status" aria-live="polite"></div>
+    <div class="row">
+      <button id="check">Unlock</button>
+      <button id="hintbtn" class="ghost">Show a hint</button>
+      <button id="next" style="display:none">Next lock</button>
+    </div>
+  </section>
+
+  <section id="win" class="screen">
+    <p class="blue" style="font-size:44px">✧ ୨୧ ✧</p>
+    <h1>The vault is open!</h1>
+    <h2 class="blue">Happy 22nd birthday, Kailin!</h2>
+    <p id="final" class="q"></p>
+    <p class="muted" id="wintime"></p>
+    <button id="again" class="ghost">Play again</button>
+  </section>
+</main>
+
+<script>
+// ===== EDIT ME =====
+const FINAL_MESSAGE = "Happy Big 22nd love u lots and I manifest a big year of success, fitness and happiness for you!!";
+// a = accepted answers (case, spaces and punctuation are ignored)
+const Q = [
+ {t:"The Beginning",s:"✧",q:"What month did our friendship officially begin?",a:["may"]},
+ {t:"A Name of Our Own",s:"୨୧",q:"What is the special nickname I call you?",a:["lumlum","lum lum","lum"]},
+ {t:"Questionable Taste",s:"♡",q:"What dipping ingredient do you eat with your food that I find really strange?",a:["sugar"]},
+ {t:"The Delivery Incident",s:"⋆",q:"What did I order to your house that you got caught for?",a:["vape","a vape"]},
+ {t:"The Third Bestie",s:"୨୧",q:"What is the name of our crocheted friendship mascot?",a:["numbling"]},
+ {t:"The Evidence",s:"⊹",q:"Which app holds the evidence of our most questionable conversations?",a:["snapchat","snap"]},
+ {t:"The Nostalgia File",s:"✧",q:"What place have we visited together that instantly brings back memories?",a:["chinese school","chineseschool"]},
+ {t:"First Impressions",s:"♡",q:"What one word describes my first impression of you?",a:["funny"]},
+ {t:"The Morning Ritual",s:"☾",q:"What did I sing to you in the mornings before school?",a:["its time to wake up","time to wake up","it is time to wake up"]},
+ {t:"The Doppelgänger",s:"⋆",q:"Which fictional character do I always say you look like?",a:["toothless"]},
+ {t:"The Shopping Habit",s:"⊹",q:"Which shopping app do you keep finding random stuff on?",a:["joybuy"]},
+ {t:"The Travel Wishlist",s:"✈",q:"Which two countries would we visit together if we could go anywhere?",a:["spain and china","china and spain","spain china","china spain","spain & china","china & spain"]},
+ {t:"The Double-Date Files",s:"⋆",q:"What was the name of the cinema we went to for a double date?",a:["light","the light"]},
+ {t:"The Iconic Costume",s:"✧",q:"At Chinese school, which costume did you see that became iconic?",a:["pikachu"]},
+ {t:"The Clone Test",s:"୨୧",q:"If someone replaced you with an identical clone, what feature would give you away?",a:["mole","a mole","the mole"]},
+ {t:"The Wooden Weapon",s:"⋆",q:"What did you reach for to smack his ex?",a:["wood","wooden","a wood"]},
+ {t:"The Birthday Remedy",s:"♡",q:"What single thing could improve Kailin’s birthday mood the fastest?",a:["food"]},
+ {t:"A Taste of the Past",s:"☾",q:"Which vape liquid flavour tasted the worst back in the day?",a:["milk"]},
+ {t:"The Spider Incident",s:"⊹",q:"What were we making when a spider crawled up my neck?",a:["sushi"]},
+ {t:"The Snapchat Chef",s:"✧",q:"What meal were you obsessed with cooking and sending me Snapchat photos of?",a:["pasta"]},
+ {t:"The Laughing Fit",s:"♡",q:"What were we laughing about so hard that I almost choked?",a:["gum"]},
+ {t:"The Final Level",s:"୨୧",q:"How old are you turninggggg?!",a:["22","twenty two","twentytwo"]}
+];
+// ===================
+const $=id=>document.getElementById(id), N=Q.length, C=2*Math.PI*33;
+const norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
+let cur=0,solved=false,secs=0,timer=null,hinted=false;
+
+function load(){try{const d=JSON.parse(localStorage.getItem("kailin22v2")||"{}");return{c:d.c>0&&d.c<N?d.c:0,t:d.t||0}}catch(e){return{c:0,t:0}}}
+function save(){try{localStorage.setItem("kailin22v2",JSON.stringify({c:cur,t:secs}))}catch(e){}}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id));window.scrollTo(0,0)}
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function tick(){secs++;$("clock").textContent=fmt(secs);if(secs%10===0)save()}
+function ring(done){$("ring").style.strokeDashoffset=C*(1-done/N)}
+
+function render(){
+  solved=false;hinted=false;const q=Q[cur];
+  $("count").textContent="Lock "+(cur+1)+" of "+N;
+  $("title").textContent=String(cur+1).padStart(2,"0")+" · "+q.t;
+  $("sym").textContent=q.s;$("q").textContent=q.q;
+  $("ans").value="";$("ans").disabled=false;$("hint").textContent="";
+  $("msg").textContent="";$("msg").className="";$("ic").textContent="🔒";
+  $("card").classList.remove("open");
+  $("check").style.display="";$("hintbtn").style.display="";$("next").style.display="none";
+  ring(cur);show("play");
+  clearInterval(timer);timer=setInterval(tick,1000);$("clock").textContent=fmt(secs);
+  setTimeout(()=>$("ans").focus(),50);
+}
+function check(){
+  if(solved)return;
+  const v=norm($("ans").value);
+  if(!v){$("msg").className="bad";$("msg").textContent="Enter a code word first.";return}
+  if(Q[cur].a.map(norm).includes(v)){
+    solved=true;$("ic").textContent="🔓";$("card").classList.add("open");
+    $("msg").className="ok";$("msg").textContent="✅ Correct! Click… lock "+(cur+1)+" opens.";
+    $("ans").disabled=true;$("ans").blur();ring(cur+1);
+    $("check").style.display="none";$("hintbtn").style.display="none";$("hint").textContent="";
+    $("next").style.display="";$("next").textContent=cur===N-1?"Open the vault door":"On to the next lock";
+  }else{
+    $("msg").className="bad";$("msg").textContent="❌ Incorrect. The lock won’t budge. Try again!";
+    $("card").classList.remove("shake");void $("card").offsetWidth;$("card").classList.add("shake");$("ans").select();
+  }
+}
+function hint(){
+  const a=Q[cur].a[0].replace(/[^a-z0-9 ]/gi,"");
+  $("hint").textContent=a.split("").map((ch,i)=>ch===" "?"  ":(i===0?ch.toUpperCase():"_")).join(" ");
+}
+function next(){cur++;if(cur>=N){win();return}save();render()}
+function win(){
+  clearInterval(timer);try{localStorage.removeItem("kailin22v2")}catch(e){}
+  $("final").textContent=FINAL_MESSAGE;$("wintime").textContent="Time in the vault: "+fmt(secs);show("win");
+  const sy=["✧","⋆","☾","♡","✈","୨୧","⊹"];
+  for(let i=0;i<40;i++){const c=document.createElement("div");c.className="star";c.textContent=sy[i%sy.length];
+    c.style.left=Math.random()*100+"vw";c.style.animationDuration=(3+Math.random()*3)+"s";c.style.animationDelay=Math.random()*2+"s";
+    document.body.appendChild(c);setTimeout(()=>c.remove(),8000)}
+}
+$("start").onclick=()=>{const s=load();cur=s.c;secs=s.t;render()};
+$("reset").onclick=()=>{cur=0;secs=0;save();render()};
+$("again").onclick=()=>{cur=0;secs=0;save();show("intro");$("start").textContent="Enter the vault";$("reset").style.display="none"};
+$("check").onclick=check;$("next").onclick=next;$("hintbtn").onclick=hint;
+$("ans").addEventListener("keydown",e=>{if(e.key==="Enter")check()});
+const s0=load();if(s0.c>0){$("start").textContent="Continue from lock "+(s0.c+1);$("reset").style.display=""}
+</script>
+</body>
+</html>
